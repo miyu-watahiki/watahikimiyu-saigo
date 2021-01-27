@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>鬼退治をしてみよう</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/addons/p5.sound.min.js"></script>
+    <style>
+      body {
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>鬼退治をしてみよう</h1>
+    <div>
+      <div>あなたのID: <span id="myid"></span></div>
+      <div>
+        ルームID: <input id="room" type="text" size="10" value="room001" />
+      </div>
+      <button id="connect">ルームに入る</button>
+      <button id="speak">説明を聞いてね</button>
+      <div>受信した情報はコンソールログで確認してください</div>
+    </div>
+    <script>
+      let socket = io.connect();
+      let myid;
+
+      let room = document.querySelector("#room").value;
+      let btn = document.querySelector("#connect");
+
+      let b = 0;
+      let g = 0;
+
+      btn.addEventListener("click", function () {
+        socket.emit("join", room);
+        btn.remove();
+      });
+
+      socket.on("mylogin", function (data) {
+        myid = data;
+        document.querySelector("#myid").innerHTML = myid;
+        console.log("あなたのID: ", myid);
+      });
+
+      socket.on("sensor", function (data) {
+        g = parseFloat(data.g);
+        b = parseFloat(data.b);
+        console.log(g);
+      });
+
+      let x = 500;
+      let y = 500;
+      let targetX = 500;
+      let targetY = 500;
+      let speed = 0.04;
+      let mame;
+      let oni;
+      let oto;
+
+      function preload() {
+        bg1 = loadImage("img/21.jpg");
+        oni = loadImage("img/oni.png");
+        mame = loadImage("img/mame.png");
+        oto = loadSound("sound/oto.mp3");
+      }
+
+      function setup() {
+        createCanvas(500, 500);
+        imageMode(CENTER);
+        targetX = random(width);
+        targetY = random(height);
+      }
+
+      function draw() {
+        image(bg1, width / 2, height / 2);
+        x = x + speed * g;
+        y = y + speed * b;
+
+        let max = 500;
+        let min = 10;
+
+        if (x > max) {
+          x = max;
+        } else if (x < min) {
+          x = min;
+        }
+        if (y > max) {
+          y = max;
+        } else if (y < min + 10) {
+          y = min + 10;
+        }
+
+        let distance = Math.sqrt(
+          (x - targetX) * (x - targetX) + (y - targetY) * (y - targetY)
+        );
+        if (distance < 30) {
+          setup();
+          oto.play();
+        }
+        image(oni, targetX, targetY, 100, 100);
+        image(mame, x, y, 50, 50);
+      }
+
+      //説明するやつ
+      let msg = new SpeechSynthesisUtterance();
+      let voices = window.speechSynthesis.getVoices();
+
+      function speak(text) {
+        // 以下オプション設定
+        msg.voice = voices[7]; // 7:Google 日本人 ja-JP ※他は英語のみ
+        msg.volume = 1.0; // 音量 min 0 ~ max 1
+        msg.rate = 1; // 速度 min 0 ~ max 10
+        msg.pitch = 1.0; // 音程 min 0 ~ max 2
+
+        msg.text = text; // 喋る内容
+        msg.lang = "ja-JP"; // en-US or ja-JP
+        // msg.lang = 'en-US'; // en-US or ja-JP
+
+        // 発話実行
+        speechSynthesis.speak(msg);
+      }
+
+      // 終了時の処理
+      msg.onend = function (event) {
+        console.log("End: ", text);
+      };
+
+      let text = "鬼退治だぞーーー隣のボタンをおして始めてね";
+
+      let button = document.querySelector("#speak");
+      button.onclick = function () {
+        speak(text);
+      };
+    </script>
+  </body>
+</html>
